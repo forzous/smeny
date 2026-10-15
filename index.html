@@ -128,9 +128,14 @@ button:active{transform:scale(.97);opacity:.85}
 /* appearance */
 .no-sum .day .s{display:none}
 .tabs{display:flex;background:var(--bg);border-radius:10px;padding:2px;margin:2px 0 14px}
+.mseg{display:flex;background:var(--bg);border-radius:10px;padding:2px;margin:0 0 12px}
+.row[hidden]{display:none}
+.durin{display:flex;align-items:center;gap:6px}
+.durin input{width:48px;text-align:right}
+.durin span{color:var(--sub);font-size:15px}
 .seg{display:flex;background:var(--bg);border-radius:10px;padding:2px}
-.tabs button,.seg button{flex:1;min-height:34px;border-radius:8px;font-size:14px;font-weight:600;color:var(--sub);padding:0 4px}
-.tabs button.on,.seg button.on{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.tabs button,.seg button,.mseg button{flex:1;min-height:34px;border-radius:8px;font-size:14px;font-weight:600;color:var(--sub);padding:0 4px}
+.tabs button.on,.seg button.on,.mseg button.on{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.18)}
 .opt{margin:0 0 16px}
 .opt>.t{font-size:13px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;margin:0 4px 6px}
 .vprev{border:1px solid var(--sep);border-radius:14px;padding:10px;margin-bottom:16px}
@@ -188,9 +193,13 @@ input[type=color]::-moz-color-swatch{border:1px solid rgba(0,0,0,.15);border-rad
   <div class="grab"></div>
   <h2 id="shTitle"></h2>
   <div class="sub" id="shSub">Любой день, включая выходные</div>
+  <div class="mseg" id="modeSeg">
+    <button data-v="time" class="on">Начало и конец</button><button data-v="dur">Сколько отработал</button>
+  </div>
   <div class="rows">
-    <div class="row"><label for="tStart">Начало</label><input type="time" id="tStart" value="09:00"></div>
-    <div class="row"><label for="tEnd">Конец</label><input type="time" id="tEnd" value="18:00"></div>
+    <div class="row" data-m="dur" hidden><label for="dH">Отработано</label><div class="durin"><input id="dH" type="number" inputmode="numeric" min="0" max="24" placeholder="0"><span>ч</span><input id="dM" type="number" inputmode="numeric" min="0" max="59" placeholder="0"><span>мин</span></div></div>
+    <div class="row" data-m="time"><label for="tStart">Начало</label><input type="time" id="tStart" value="09:00"></div>
+    <div class="row" data-m="time"><label for="tEnd">Конец</label><input type="time" id="tEnd" value="18:00"></div>
     <div class="row"><label for="tRate">Ставка за час, ₽</label><input class="rt" id="tRate" inputmode="decimal" placeholder="0,00"></div>
   </div>
   <div class="preview"><b id="pvSum">0,00 ₽</b><span id="pvDur">0 ч</span></div>
@@ -320,6 +329,7 @@ const fmtMoney = kop => (kop / 100).toLocaleString('ru-RU', {minimumFractionDigi
 const kopToInput = kop => kop ? (kop / 100).toFixed(2).replace('.', ',') : '';
 const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 const durMin = (s, e) => { let d = toMin(e) - toMin(s); if (d <= 0) d += 1440; return d; }; // через полночь
+const shiftMin = s => s.dur ? s.dur : durMin(s.start, s.end);
 const earn = (min, rateKop) => Math.round(min * rateKop / 60);
 const fmtDur = min => { const h = Math.floor(min / 60), m = min % 60; return m ? `${h} ч ${m} мин` : `${h} ч`; };
 const fmtShort = kop => {
@@ -346,7 +356,7 @@ function render() {
     const cls = ['day'];
     if (s) {
       cls.push('work');
-      const mn = durMin(s.start, s.end);
+      const mn = shiftMin(s);
       const e = earn(mn, s.rate);
       cnt++; mins += mn; sum += e;
       const txt = look.shape === 'circle' ? fmtShort(e).replace(' ₽', '').replace(' тыс', 'к') : fmtShort(e);
@@ -363,10 +373,31 @@ function render() {
   $('stSum').textContent = fmtMoney(sum);
 }
 
+let mode = 'time';
+const getDur = () => (parseInt($('dH').value, 10) || 0) * 60 + (parseInt($('dM').value, 10) || 0);
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === m));
+  document.querySelectorAll('.rows [data-m]').forEach(r => { r.hidden = r.dataset.m !== m; });
+  preview();
+}
+$('modeSeg').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) setMode(b.dataset.v); });
+
 function preview() {
-  const s = $('tStart').value, e = $('tEnd').value;
   const rate = parseMoney($('tRate').value);
   $('err').textContent = '';
+  if (mode === 'dur') {
+    const mn = getDur();
+    if (mn <= 0) { $('pvSum').textContent = fmtMoney(0); $('pvDur').textContent = '—'; return false; }
+    if (mn > 1440) {
+      $('err').textContent = 'Не больше 24 часов';
+      $('pvSum').textContent = fmtMoney(0); $('pvDur').textContent = '—'; return false;
+    }
+    $('pvSum').textContent = fmtMoney(earn(mn, rate));
+    $('pvDur').textContent = fmtDur(mn);
+    return true;
+  }
+  const s = $('tStart').value, e = $('tEnd').value;
   if (!s || !e) { $('pvSum').textContent = fmtMoney(0); $('pvDur').textContent = '—'; return false; }
   if (s === e) {
     $('err').textContent = 'Конец не может совпадать с началом';
@@ -382,11 +413,19 @@ function openSheet(k) {
   selected = k; repeatN = 0; $('rn').textContent = 0;
   const s = shifts[k];
   $('shTitle').textContent = keyToDate(k).toLocaleDateString('ru-RU', {weekday: 'long', day: 'numeric', month: 'long'});
-  $('tStart').value = s ? s.start : ($('tStart').value || '09:00');
-  $('tEnd').value = s ? s.end : ($('tEnd').value || '18:00');
+  if (s && s.dur) {
+    $('dH').value = Math.floor(s.dur / 60) || ''; $('dM').value = s.dur % 60 || '';
+    mode = 'dur';
+  } else if (s) {
+    $('tStart').value = s.start; $('tEnd').value = s.end;
+    mode = 'time';
+  } else {
+    $('tStart').value = $('tStart').value || '09:00';
+    $('tEnd').value = $('tEnd').value || '18:00';
+  }
   $('tRate').value = kopToInput(s ? s.rate : baseRate);
   $('del').hidden = !s;
-  preview();
+  setMode(mode);
   $('ov').classList.add('show'); $('sheet').classList.add('show');
 }
 function closeSheet() { $('ov').classList.remove('show'); $('sheet').classList.remove('show'); selected = null; }
@@ -606,13 +645,14 @@ if (window.queryLocalFonts) {
   };
 }
 applyFont();
-['tStart', 'tEnd', 'tRate'].forEach(id => $(id).addEventListener('input', preview));
+['tStart', 'tEnd', 'tRate', 'dH', 'dM'].forEach(id => $(id).addEventListener('input', preview));
 $('rm').onclick = () => { repeatN = Math.max(0, repeatN - 1); $('rn').textContent = repeatN; };
 $('rp').onclick = () => { repeatN = Math.min(31, repeatN + 1); $('rn').textContent = repeatN; };
 
 $('save').onclick = () => {
   if (!preview()) return;
-  const data = {start: $('tStart').value, end: $('tEnd').value, rate: parseMoney($('tRate').value)};
+  const rate = parseMoney($('tRate').value);
+  const data = mode === 'dur' ? {dur: getDur(), rate} : {start: $('tStart').value, end: $('tEnd').value, rate};
   const d0 = keyToDate(selected);
   for (let i = 0; i <= repeatN; i++) {
     const d = new Date(d0); d.setDate(d.getDate() + i);
@@ -646,8 +686,9 @@ $('impFile').addEventListener('change', async e => {
     if (d.app !== 'shift-calendar' || typeof d.shifts !== 'object' || d.shifts === null) throw new Error('format');
     const clean = {};
     for (const [k, v] of Object.entries(d.shifts)) {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(k) && v && /^\d{2}:\d{2}$/.test(v.start) && /^\d{2}:\d{2}$/.test(v.end) && Number.isInteger(v.rate) && v.rate >= 0)
-        clean[k] = {start: v.start, end: v.end, rate: v.rate};
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !v || !Number.isInteger(v.rate) || v.rate < 0) continue;
+      if (Number.isInteger(v.dur) && v.dur > 0 && v.dur <= 1440) clean[k] = {dur: v.dur, rate: v.rate};
+      else if (/^\d{2}:\d{2}$/.test(v.start) && /^\d{2}:\d{2}$/.test(v.end)) clean[k] = {start: v.start, end: v.end, rate: v.rate};
     }
     const n = Object.keys(clean).length;
     if (!confirm(`Заменить текущие данные? В файле смен: ${n}`)) return;
