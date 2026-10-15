@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Календарь смен</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Смены">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+:root{
+  --bg:#F2F2F7; --card:#fff; --text:#000; --sub:#8E8E93; --sep:rgba(60,60,67,.12);
+  --blue:#007AFF; --green:#34C759; --red:#FF3B30; --off:#E9E9EE; --off-text:#3A3A3C;
+  --shadow:0 2px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#000; --card:#1C1C1E; --text:#fff; --sub:#8E8E93; --sep:rgba(84,84,88,.5); --off:#2C2C2E; --off-text:#EBEBF5; --shadow:none}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--font,-apple-system),BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+  padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));
+  max-width:520px;margin:0 auto;-webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;transition:transform .12s,opacity .12s}
+button:active{transform:scale(.97);opacity:.85}
+.top{display:flex;align-items:flex-end;justify-content:space-between;margin:8px 4px 14px}
+.top h1{font-size:34px;font-weight:700;margin:0;letter-spacing:-.5px;text-transform:capitalize;line-height:1.1}
+.top small{display:block;color:var(--sub);font-size:15px;font-weight:500;margin-bottom:2px}
+.nav{display:flex;gap:6px}
+.nav button{width:44px;height:44px;border-radius:50%;background:var(--card);box-shadow:var(--shadow);color:var(--blue);font-size:20px;font-weight:600}
+.card{background:var(--card);border-radius:20px;padding:14px;box-shadow:var(--shadow);margin-bottom:14px}
+.rate{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 6px}
+.rate label{font-size:16px;font-weight:500}
+.rate .inp{display:flex;align-items:center;gap:6px;background:var(--bg);border-radius:12px;padding:0 12px;height:44px}
+.rate input{width:90px;border:0;background:none;font:inherit;font-size:18px;font-weight:600;text-align:right;color:var(--text);outline:none}
+.rate span{color:var(--sub);font-weight:500}
+.legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--sub);font-size:13px;padding:2px 6px 10px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-1px}
+.week,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.week div{text-align:center;font-size:12px;font-weight:600;color:var(--sub);padding:4px 0 8px;text-transform:uppercase}
+.week div:nth-child(n+6){color:#FF9F9A}
+.day{
+  aspect-ratio:1/1.12;border-radius:14px;background:var(--off);color:var(--off-text);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:relative;min-height:44px;
+}
+.day.empty{background:none;pointer-events:none}
+.day .n{font-size:17px;font-weight:600;line-height:1}
+.day .s{font-size:9.5px;font-weight:600;line-height:1.1;margin-top:2px;white-space:nowrap}
+.day.past:not(.work){opacity:.55}
+.day.work{background:var(--green);color:#fff;box-shadow:0 3px 10px rgba(52,199,89,.35)}
+.day.today .n{box-shadow:0 0 0 2px var(--blue);border-radius:50%;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+.day.today.work .n{box-shadow:0 0 0 2px #fff}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--bg);border-radius:14px;padding:12px 14px}
+.stat b{display:block;font-size:20px;font-weight:700;letter-spacing:-.3px}
+.stat span{font-size:13px;color:var(--sub)}
+.stat.big{grid-column:1/-1;background:var(--green);color:#fff}
+.stat.big span{color:rgba(255,255,255,.85)}
+.stat.big b{font-size:30px}
+/* sheet */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s;z-index:10}
+.overlay.show{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:520px;background:var(--card);
+  border-radius:26px 26px 0 0;padding:10px 18px max(22px,env(safe-area-inset-bottom));
+  transform:translateY(105%);transition:transform .35s cubic-bezier(.32,.72,0,1);z-index:11;max-height:92vh;overflow:auto;
+}
+.sheet.show{transform:none}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--sep);margin:0 auto 14px}
+.sheet h2{margin:0 0 2px;font-size:22px;font-weight:700;text-transform:capitalize}
+.sheet .sub{color:var(--sub);font-size:14px;margin-bottom:14px}
+.rows{background:var(--bg);border-radius:14px;overflow:hidden}
+.row{display:flex;align-items:center;justify-content:space-between;padding:0 14px;min-height:50px}
+.row+.row{border-top:1px solid var(--sep)}
+.row label{font-size:16px}
+.row input{font:inherit;font-size:17px;font-weight:600;color:var(--blue);background:none;border:0;outline:none;text-align:right;min-width:0}
+.row input[type=time]{-webkit-appearance:none;appearance:none}
+.row input.rt{width:110px}
+.preview{margin:14px 0;text-align:center}
+.preview b{display:block;font-size:34px;font-weight:700;letter-spacing:-.6px;color:var(--green)}
+.preview span{font-size:14px;color:var(--sub)}
+.err{color:var(--red);font-size:14px;text-align:center;min-height:18px;margin-bottom:6px}
+.rep{display:flex;align-items:center;justify-content:space-between;margin:2px 0 12px;padding:0 4px;font-size:15px}
+.rep .st{display:flex;align-items:center;gap:10px}
+.rep .st button{width:34px;height:34px;border-radius:50%;background:var(--bg);font-size:18px;font-weight:600;color:var(--blue)}
+.rep .st b{min-width:20px;text-align:center}
+.rep .go{color:var(--blue);font-weight:600;padding:8px 4px}
+.btns{display:flex;gap:10px}
+.btn{flex:1;height:52px;border-radius:14px;font-size:17px;font-weight:600}
+.btn.pri{background:var(--blue);color:#fff}
+.btn.del{background:rgba(255,59,48,.12);color:var(--red)}
+.btn.del[hidden]{display:none}
+/* settings */
+.nav .gear{font-size:19px}
+.group-title{font-size:13px;color:var(--sub);text-transform:uppercase;margin:14px 14px 6px;letter-spacing:.3px}
+.fonts .row{width:100%;text-align:left;cursor:pointer}
+.fonts .row .nm{font-size:17px}
+.fonts .row .ex{display:block;font-size:13px;color:var(--sub);margin-top:2px}
+.fonts .row .ck{color:var(--blue);font-weight:700;font-size:18px;opacity:0;font-family:system-ui,sans-serif}
+.fonts .row.on .ck{opacity:1}
+.fonts .row>div{padding:8px 0}
+.custom{display:flex;align-items:center;gap:8px;padding:0 14px;min-height:50px;background:var(--bg);border-radius:14px}
+.custom input{flex:1;min-width:0;font:inherit;font-size:17px;font-weight:600;color:var(--blue);background:none;border:0;outline:none;text-align:right}
+.custom label{font-size:16px;white-space:nowrap}
+.hint{font-size:13px;color:var(--sub);margin:8px 14px 0;line-height:1.35}
+.linkbtn{color:var(--blue);font-weight:600;font-size:15px;padding:10px 14px;display:block}
+.localList{max-height:200px;overflow:auto;background:var(--bg);border-radius:14px;margin:6px 0 0}
+.localList button{display:block;width:100%;text-align:left;padding:11px 14px;font-size:16px;border-top:1px solid var(--sep)}
+.localList button:first-child{border-top:0}
+.localList .empty{padding:12px 14px;color:var(--sub);font-size:14px}
+.sample{margin:14px 0 4px;padding:14px;border-radius:14px;background:var(--bg);text-align:center}
+.sample b{display:block;font-size:26px;letter-spacing:-.4px}
+.sample span{color:var(--sub);font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div><small id="year"></small><h1 id="month"></h1></div>
+  <div class="nav"><button id="gear" class="gear" aria-label="Настройки">⚙︎</button><button id="prev" aria-label="Назад">‹</button><button id="next" aria-label="Вперёд">›</button></div>
+</div>
+
+<div class="card">
+  <div class="rate">
+    <label for="rate">Доход за час</label>
+    <div class="inp"><input id="rate" inputmode="decimal" placeholder="0,00"><span>₽</span></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="legend">
+    <span><i style="background:var(--green)"></i>Работал</span>
+    <span><i style="background:var(--off)"></i>Выходной</span>
+    <span><i style="box-shadow:inset 0 0 0 2px var(--blue)"></i>Сегодня</span>
+  </div>
+  <div class="week"><div>пн</div><div>вт</div><div>ср</div><div>чт</div><div>пт</div><div>сб</div><div>вс</div></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="card">
+  <div class="stats">
+    <div class="stat"><b id="stCount">0</b><span>смен</span></div>
+    <div class="stat"><b id="stHours">0 ч</b><span>отработано</span></div>
+    <div class="stat big"><b id="stSum">0,00 ₽</b><span>доход за месяц</span></div>
+  </div>
+</div>
+
+<div class="overlay" id="ov"></div>
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <h2 id="shTitle"></h2>
+  <div class="sub" id="shSub">Любой день, включая выходные</div>
+  <div class="rows">
+    <div class="row"><label for="tStart">Начало</label><input type="time" id="tStart" value="09:00"></div>
+    <div class="row"><label for="tEnd">Конец</label><input type="time" id="tEnd" value="18:00"></div>
+    <div class="row"><label for="tRate">Ставка за час, ₽</label><input class="rt" id="tRate" inputmode="decimal" placeholder="0,00"></div>
+  </div>
+  <div class="preview"><b id="pvSum">0,00 ₽</b><span id="pvDur">0 ч</span></div>
+  <div class="err" id="err"></div>
+  <div class="rep">
+    <span>Повторить на следующие</span>
+    <div class="st"><button id="rm">−</button><b id="rn">0</b><button id="rp">+</button></div>
+    <span>дн.</span>
+  </div>
+  <div class="btns">
+    <button class="btn del" id="del" hidden>Удалить</button>
+    <button class="btn pri" id="save">Сохранить</button>
+  </div>
+</div>
+
+<div class="sheet" id="setSheet">
+  <div class="grab"></div>
+  <h2>Шрифт</h2>
+  <div class="sub">Выберите шрифт интерфейса</div>
+  <div class="sample"><b id="smSum">12 345,67 ₽</b><span id="smTxt">Октябрь · 18 смен · 142 ч 30 мин</span></div>
+  <div class="group-title">Системные шрифты</div>
+  <div class="rows fonts" id="fontList"></div>
+  <div class="group-title">Свой шрифт</div>
+  <div class="custom">
+    <label for="customFont">Название</label>
+    <input id="customFont" list="localFonts" placeholder="например, Avenir Next" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <datalist id="localFonts"></datalist>
+  </div>
+  <div class="hint">Введите название шрифта, установленного на устройстве. Если такого шрифта нет, останется стандартный.</div>
+  <button class="linkbtn" id="loadLocal" hidden>Показать шрифты устройства…</button>
+  <div id="localList" class="localList" hidden></div>
+  <div class="group-title">Данные</div>
+  <div class="rows">
+    <button class="row" id="exp" style="width:100%"><label style="pointer-events:none">Сохранить копию в файл</label><span style="color:var(--blue)">↥</span></button>
+    <button class="row" id="imp" style="width:100%"><label style="pointer-events:none">Загрузить из файла</label><span style="color:var(--blue)">↧</span></button>
+  </div>
+  <div class="hint" id="dataMsg">Копия защитит смены, если браузер очистит данные или вы смените телефон.</div>
+  <input type="file" id="impFile" accept="application/json,.json" hidden>
+  <div class="btns" style="margin-top:16px"><button class="btn pri" id="setDone">Готово</button></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch (e) { return d; } };
+const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+let shifts = load('shifts', {});      // { 'YYYY-MM-DD': {start, end, rate(копейки)} }
+let baseRate = load('rate', 0);       // копейки
+let view = new Date(); view.setDate(1);
+let selected = null, repeatN = 0;
+
+const pad = n => String(n).padStart(2, '0');
+const key = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const keyToDate = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+
+// деньги — только в целых копейках
+const parseMoney = s => {
+  const v = parseFloat(String(s).replace(/\s/g, '').replace(',', '.'));
+  return isFinite(v) && v >= 0 ? Math.round(v * 100) : 0;
+};
+const fmtMoney = kop => (kop / 100).toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽';
+const kopToInput = kop => kop ? (kop / 100).toFixed(2).replace('.', ',') : '';
+const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const durMin = (s, e) => { let d = toMin(e) - toMin(s); if (d <= 0) d += 1440; return d; }; // через полночь
+const earn = (min, rateKop) => Math.round(min * rateKop / 60);
+const fmtDur = min => { const h = Math.floor(min / 60), m = min % 60; return m ? `${h} ч ${m} мин` : `${h} ч`; };
+const fmtShort = kop => { const r = Math.round(kop / 100); return r.toLocaleString('ru-RU') + ' ₽'; };
+
+function render() {
+  const y = view.getFullYear(), m = view.getMonth();
+  $('year').textContent = y;
+  $('month').textContent = view.toLocaleDateString('ru-RU', {month: 'long'});
+  const first = new Date(y, m, 1);
+  const offset = (first.getDay() + 6) % 7;
+  const days = new Date(y, m + 1, 0).getDate();
+  const todayK = key(new Date());
+  let html = '';
+  for (let i = 0; i < offset; i++) html += '<div class="day empty"></div>';
+  let cnt = 0, mins = 0, sum = 0;
+  for (let d = 1; d <= days; d++) {
+    const k = `${y}-${pad(m + 1)}-${pad(d)}`;
+    const s = shifts[k];
+    const cls = ['day'];
+    if (s) {
+      cls.push('work');
+      const mn = durMin(s.start, s.end);
+      const e = earn(mn, s.rate);
+      cnt++; mins += mn; sum += e;
+      html += `<button class="${cls.concat(k === todayK ? ['today'] : []).join(' ')}" data-k="${k}"><span class="n">${d}</span><span class="s">${fmtShort(e)}</span></button>`;
+    } else {
+      if (k < todayK) cls.push('past');
+      if (k === todayK) cls.push('today');
+      html += `<button class="${cls.join(' ')}" data-k="${k}"><span class="n">${d}</span></button>`;
+    }
+  }
+  $('grid').innerHTML = html;
+  $('stCount').textContent = cnt;
+  $('stHours').textContent = fmtDur(mins);
+  $('stSum').textContent = fmtMoney(sum);
+}
+
+function preview() {
+  const s = $('tStart').value, e = $('tEnd').value;
+  const rate = parseMoney($('tRate').value);
+  $('err').textContent = '';
+  if (!s || !e) { $('pvSum').textContent = fmtMoney(0); $('pvDur').textContent = '—'; return false; }
+  if (s === e) {
+    $('err').textContent = 'Конец не может совпадать с началом';
+    $('pvSum').textContent = fmtMoney(0); $('pvDur').textContent = '—'; return false;
+  }
+  const mn = durMin(s, e);
+  $('pvSum').textContent = fmtMoney(earn(mn, rate));
+  $('pvDur').textContent = fmtDur(mn) + (toMin(e) < toMin(s) ? ' · через полночь' : '');
+  return true;
+}
+
+function openSheet(k) {
+  selected = k; repeatN = 0; $('rn').textContent = 0;
+  const s = shifts[k];
+  $('shTitle').textContent = keyToDate(k).toLocaleDateString('ru-RU', {weekday: 'long', day: 'numeric', month: 'long'});
+  $('tStart').value = s ? s.start : ($('tStart').value || '09:00');
+  $('tEnd').value = s ? s.end : ($('tEnd').value || '18:00');
+  $('tRate').value = kopToInput(s ? s.rate : baseRate);
+  $('del').hidden = !s;
+  preview();
+  $('ov').classList.add('show'); $('sheet').classList.add('show');
+}
+function closeSheet() { $('ov').classList.remove('show'); $('sheet').classList.remove('show'); selected = null; }
+
+$('grid').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) openSheet(b.dataset.k); });
+$('ov').addEventListener('click', () => { closeSheet(); closeSettings(); });
+
+/* ---------- шрифты ---------- */
+const FONTS = [
+  {id: 'sf',      name: 'SF Pro (iOS)',        ex: 'Системный шрифт iPhone',      stack: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'},
+  {id: 'rounded', name: 'SF Rounded',          ex: 'Скруглённый, мягкий',         stack: 'ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif'},
+  {id: 'serif',   name: 'New York',            ex: 'С засечками',                 stack: 'ui-serif, "New York", "Iowan Old Style", Georgia, serif'},
+  {id: 'mono',    name: 'SF Mono',             ex: 'Моноширинный',                stack: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace'},
+  {id: 'helv',    name: 'Helvetica Neue',      ex: 'Классика Apple',              stack: '"Helvetica Neue", Helvetica, Arial, sans-serif'},
+  {id: 'roboto',  name: 'Roboto',              ex: 'Системный на Android',        stack: 'Roboto, system-ui, sans-serif'},
+  {id: 'segoe',   name: 'Segoe UI',            ex: 'Системный на Windows',        stack: '"Segoe UI", system-ui, sans-serif'}
+];
+let fontPref = load('font', {id: 'sf', custom: ''});
+
+function applyFont() {
+  const custom = (fontPref.custom || '').replace(/["';{}\\<>]/g, '').trim();
+  let stack;
+  if (custom) stack = `"${custom}", -apple-system, system-ui, sans-serif`;
+  else stack = (FONTS.find(f => f.id === fontPref.id) || FONTS[0]).stack;
+  document.documentElement.style.setProperty('--font', stack);
+  document.body.style.fontFamily = stack;
+  document.querySelectorAll('button,input').forEach(el => el.style.fontFamily = 'inherit');
+}
+function renderFontList() {
+  const custom = !!(fontPref.custom || '').trim();
+  $('fontList').innerHTML = FONTS.map(f =>
+    `<button class="row ${!custom && fontPref.id === f.id ? 'on' : ''}" data-f="${f.id}">
+       <div><span class="nm" style="font-family:${f.stack}">${f.name}</span><span class="ex">${f.ex}</span></div>
+       <span class="ck">✓</span></button>`).join('');
+  $('customFont').value = fontPref.custom || '';
+}
+$('fontList').addEventListener('click', e => {
+  const b = e.target.closest('[data-f]'); if (!b) return;
+  fontPref = {id: b.dataset.f, custom: ''};
+  store('font', fontPref); applyFont(); renderFontList();
+});
+$('customFont').addEventListener('input', e => {
+  fontPref = {id: fontPref.id, custom: e.target.value};
+  store('font', fontPref); applyFont();
+  document.querySelectorAll('#fontList .row').forEach(r => r.classList.remove('on'));
+  if (!e.target.value.trim()) renderFontList();
+});
+function openSettings() { renderFontList(); $('ov').classList.add('show'); $('setSheet').classList.add('show'); }
+function closeSettings() { $('setSheet').classList.remove('show'); if (!$('sheet').classList.contains('show')) $('ov').classList.remove('show'); }
+$('gear').onclick = openSettings;
+$('setDone').onclick = closeSettings;
+
+// Список шрифтов устройства (только Chrome/Edge на компьютере)
+let localNames = [];
+function showLocal() {
+  const q = $('customFont').value.trim().toLowerCase();
+  const items = localNames.filter(n => n.toLowerCase().includes(q)).slice(0, 80);
+  const box = $('localList');
+  box.hidden = false;
+  box.innerHTML = items.length
+    ? items.map(n => `<button data-n="${n.replace(/"/g, '&quot;')}" style="font-family:'${n.replace(/['"\\]/g, '')}',sans-serif">${n}</button>`).join('')
+    : '<div class="empty">Ничего не найдено</div>';
+}
+$('localList').addEventListener('click', e => {
+  const b = e.target.closest('[data-n]'); if (!b) return;
+  $('customFont').value = b.dataset.n;
+  fontPref = {id: fontPref.id, custom: b.dataset.n};
+  store('font', fontPref); applyFont(); showLocal();
+  document.querySelectorAll('#fontList .row').forEach(r => r.classList.remove('on'));
+});
+$('customFont').addEventListener('input', () => { if (localNames.length) showLocal(); });
+
+if (window.queryLocalFonts) {
+  $('loadLocal').hidden = false;
+  $('loadLocal').onclick = async () => {
+    const btn = $('loadLocal');
+    btn.textContent = 'Запрашиваю доступ… разрешите во всплывающем окне';
+    try {
+      const list = await Promise.race([
+        window.queryLocalFonts(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))
+      ]);
+      localNames = [...new Set(list.map(f => f.family))].sort((a, b) => a.localeCompare(b));
+      btn.textContent = `Шрифтов на устройстве: ${localNames.length}`;
+      showLocal();
+    } catch (e) {
+      btn.textContent = e.message === 'timeout'
+        ? 'Браузер не ответил. Откройте файл напрямую в Chrome или Edge и повторите'
+        : 'Нет доступа к шрифтам. Откройте файл напрямую в Chrome или Edge и разрешите доступ';
+    }
+  };
+}
+applyFont();
+['tStart', 'tEnd', 'tRate'].forEach(id => $(id).addEventListener('input', preview));
+$('rm').onclick = () => { repeatN = Math.max(0, repeatN - 1); $('rn').textContent = repeatN; };
+$('rp').onclick = () => { repeatN = Math.min(31, repeatN + 1); $('rn').textContent = repeatN; };
+
+$('save').onclick = () => {
+  if (!preview()) return;
+  const data = {start: $('tStart').value, end: $('tEnd').value, rate: parseMoney($('tRate').value)};
+  const d0 = keyToDate(selected);
+  for (let i = 0; i <= repeatN; i++) {
+    const d = new Date(d0); d.setDate(d.getDate() + i);
+    shifts[key(d)] = {...data};
+  }
+  store('shifts', shifts); closeSheet(); render();
+};
+$('del').onclick = () => { delete shifts[selected]; store('shifts', shifts); closeSheet(); render(); };
+
+$('rate').value = kopToInput(baseRate);
+$('rate').addEventListener('input', e => { baseRate = parseMoney(e.target.value); store('rate', baseRate); });
+$('rate').addEventListener('blur', e => { e.target.value = kopToInput(baseRate); });
+
+/* ---------- экспорт / импорт ---------- */
+$('exp').onclick = () => {
+  const data = {app: 'shift-calendar', version: 1, rate: baseRate, shifts, font: fontPref};
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `smeny-${key(new Date())}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  $('dataMsg').textContent = `Файл сохранён. Смен в копии: ${Object.keys(shifts).length}`;
+};
+$('imp').onclick = () => $('impFile').click();
+$('impFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (d.app !== 'shift-calendar' || typeof d.shifts !== 'object' || d.shifts === null) throw new Error('format');
+    const clean = {};
+    for (const [k, v] of Object.entries(d.shifts)) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(k) && v && /^\d{2}:\d{2}$/.test(v.start) && /^\d{2}:\d{2}$/.test(v.end) && Number.isInteger(v.rate) && v.rate >= 0)
+        clean[k] = {start: v.start, end: v.end, rate: v.rate};
+    }
+    const n = Object.keys(clean).length;
+    if (!confirm(`Заменить текущие данные? В файле смен: ${n}`)) return;
+    shifts = clean;
+    baseRate = Number.isInteger(d.rate) && d.rate >= 0 ? d.rate : baseRate;
+    store('shifts', shifts); store('rate', baseRate);
+    $('rate').value = kopToInput(baseRate);
+    render();
+    $('dataMsg').textContent = `Загружено смен: ${n}`;
+  } catch (err) {
+    $('dataMsg').textContent = 'Не удалось прочитать файл. Нужна копия, сохранённая из этого приложения';
+  }
+});
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+$('prev').onclick = () => { view.setMonth(view.getMonth() - 1); render(); };
+$('next').onclick = () => { view.setMonth(view.getMonth() + 1); render(); };
+
+render();
+</script>
+</body>
+</html>
