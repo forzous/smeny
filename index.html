@@ -6,8 +6,7 @@
 <title>Календарь смен</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" id="themeMeta" content="#F2F2F7">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Смены">
@@ -16,11 +15,14 @@
 :root{
   --bg:#F2F2F7; --card:#fff; --text:#000; --sub:#8E8E93; --sep:rgba(60,60,67,.12);
   --blue:#007AFF; --green:#34C759; --red:#FF3B30; --off:#E9E9EE; --off-text:#3A3A3C;
+  --on-work:#fff; --on-accent:#fff;
   --shadow:0 2px 14px rgba(0,0,0,.06);
+  --fs:1; --r:14px; --gap:6px; --ar:1/1.12; --mh:44px;
 }
 @media (prefers-color-scheme:dark){
-  :root{--bg:#000; --card:#1C1C1E; --text:#fff; --sub:#8E8E93; --sep:rgba(84,84,88,.5); --off:#2C2C2E; --off-text:#EBEBF5; --shadow:none}
+  :root:not([data-theme="light"]){--bg:#000; --card:#1C1C1E; --text:#fff; --sub:#8E8E93; --sep:rgba(84,84,88,.5); --off:#2C2C2E; --off-text:#EBEBF5; --shadow:none}
 }
+:root[data-theme="dark"]{--bg:#000; --card:#1C1C1E; --text:#fff; --sub:#8E8E93; --sep:rgba(84,84,88,.5); --off:#2C2C2E; --off-text:#EBEBF5; --shadow:none}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
 body{
@@ -32,7 +34,7 @@ body{
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;transition:transform .12s,opacity .12s}
 button:active{transform:scale(.97);opacity:.85}
 .top{display:flex;align-items:flex-end;justify-content:space-between;margin:8px 4px 14px}
-.top h1{font-size:34px;font-weight:700;margin:0;letter-spacing:-.5px;text-transform:capitalize;line-height:1.1}
+.top h1{font-size:calc(34px*var(--fs));font-weight:700;margin:0;letter-spacing:-.5px;text-transform:capitalize;line-height:1.1}
 .top small{display:block;color:var(--sub);font-size:15px;font-weight:500;margin-bottom:2px}
 .nav{display:flex;gap:6px}
 .nav button{width:44px;height:44px;border-radius:50%;background:var(--card);box-shadow:var(--shadow);color:var(--blue);font-size:20px;font-weight:600}
@@ -44,27 +46,31 @@ button:active{transform:scale(.97);opacity:.85}
 .rate span{color:var(--sub);font-weight:500}
 .legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--sub);font-size:13px;padding:2px 6px 10px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-1px}
-.week,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.week div{text-align:center;font-size:12px;font-weight:600;color:var(--sub);padding:4px 0 8px;text-transform:uppercase}
-.week div:nth-child(n+6){color:#FF9F9A}
+.week,.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--gap)}
+.week div{text-align:center;font-size:calc(12px*var(--fs));font-weight:600;color:var(--sub);padding:4px 0 8px;text-transform:uppercase}
+.week div.we{color:#FF9F9A}
 .day{
-  aspect-ratio:1/1.12;border-radius:14px;background:var(--off);color:var(--off-text);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:relative;min-height:44px;
+  aspect-ratio:var(--ar);border-radius:var(--r);background:var(--off);color:var(--off-text);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:relative;min-height:var(--mh);
 }
 .day.empty{background:none;pointer-events:none}
-.day .n{font-size:17px;font-weight:600;line-height:1}
-.day .s{font-size:9.5px;font-weight:600;line-height:1.1;margin-top:2px;white-space:nowrap}
+.day .n{font-size:calc(17px*var(--fs));font-weight:600;line-height:1}
+.day .s{font-size:calc(9.5px*var(--fs));font-weight:600;line-height:1.1;margin-top:2px;white-space:nowrap}
+.day{padding:0 1px;min-width:0;overflow:hidden}
+.day .s{max-width:100%;overflow:hidden}
+.day.today .s{margin-top:4px}
 .day.past:not(.work){opacity:.55}
-.day.work{background:var(--green);color:#fff;box-shadow:0 3px 10px rgba(52,199,89,.35)}
-.day.today .n{box-shadow:0 0 0 2px var(--blue);border-radius:50%;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center}
-.day.today.work .n{box-shadow:0 0 0 2px #fff}
+.day.work{background:var(--green);color:var(--on-work);box-shadow:0 3px 10px color-mix(in srgb,var(--green) 35%,transparent)}
+.day .n{flex:none}
+.day.today .n{box-shadow:0 0 0 2px var(--blue);border-radius:50%;width:calc(27px*var(--fs));height:calc(27px*var(--fs));display:flex;align-items:center;justify-content:center}
+.day.today.work .n{box-shadow:0 0 0 2px var(--on-work)}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .stat{background:var(--bg);border-radius:14px;padding:12px 14px}
-.stat b{display:block;font-size:20px;font-weight:700;letter-spacing:-.3px}
+.stat b{display:block;font-size:calc(20px*var(--fs));font-weight:700;letter-spacing:-.3px}
 .stat span{font-size:13px;color:var(--sub)}
-.stat.big{grid-column:1/-1;background:var(--green);color:#fff}
-.stat.big span{color:rgba(255,255,255,.85)}
-.stat.big b{font-size:30px}
+.stat.big{grid-column:1/-1;background:var(--green);color:var(--on-work)}
+.stat.big span{color:inherit;opacity:.85}
+.stat.big b{font-size:calc(30px*var(--fs))}
 /* sheet */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s;z-index:10}
 .overlay.show{opacity:1;pointer-events:auto}
@@ -95,7 +101,7 @@ button:active{transform:scale(.97);opacity:.85}
 .rep .go{color:var(--blue);font-weight:600;padding:8px 4px}
 .btns{display:flex;gap:10px}
 .btn{flex:1;height:52px;border-radius:14px;font-size:17px;font-weight:600}
-.btn.pri{background:var(--blue);color:#fff}
+.btn.pri{background:var(--blue);color:var(--on-accent)}
 .btn.del{background:rgba(255,59,48,.12);color:var(--red)}
 .btn.del[hidden]{display:none}
 /* settings */
@@ -119,6 +125,30 @@ button:active{transform:scale(.97);opacity:.85}
 .sample{margin:14px 0 4px;padding:14px;border-radius:14px;background:var(--bg);text-align:center}
 .sample b{display:block;font-size:26px;letter-spacing:-.4px}
 .sample span{color:var(--sub);font-size:14px}
+/* appearance */
+.no-sum .day .s{display:none}
+.tabs{display:flex;background:var(--bg);border-radius:10px;padding:2px;margin:2px 0 14px}
+.seg{display:flex;background:var(--bg);border-radius:10px;padding:2px}
+.tabs button,.seg button{flex:1;min-height:34px;border-radius:8px;font-size:14px;font-weight:600;color:var(--sub);padding:0 4px}
+.tabs button.on,.seg button.on{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.opt{margin:0 0 16px}
+.opt>.t{font-size:13px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;margin:0 4px 6px}
+.vprev{border:1px solid var(--sep);border-radius:14px;padding:10px;margin-bottom:16px}
+.pal{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:3px}
+.pal button{aspect-ratio:1;border-radius:50%;background:linear-gradient(135deg,var(--w) 50%,var(--a) 50%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+.pal button.on{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--text)}
+.row>span{font-size:16px}
+input[type=color]{-webkit-appearance:none;appearance:none;width:46px;height:30px;border:0;padding:0;background:none;border-radius:8px;cursor:pointer}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+input[type=color]::-webkit-color-swatch{border:1px solid rgba(0,0,0,.15);border-radius:8px}
+input[type=color]::-moz-color-swatch{border:1px solid rgba(0,0,0,.15);border-radius:8px}
+.sw{position:relative;width:51px;height:31px;flex:none}
+.sw input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:1}
+.sw i{position:absolute;inset:0;background:var(--sep);border-radius:16px;transition:background .2s}
+.sw i::after{content:"";position:absolute;left:2px;top:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);transition:transform .2s}
+.sw input:checked+i{background:var(--green)}
+.sw input:checked+i::after{transform:translateX(20px)}
+.linkbtn.danger{color:var(--red);text-align:left}
 </style>
 </head>
 <body>
@@ -141,7 +171,7 @@ button:active{transform:scale(.97);opacity:.85}
     <span><i style="background:var(--off)"></i>Выходной</span>
     <span><i style="box-shadow:inset 0 0 0 2px var(--blue)"></i>Сегодня</span>
   </div>
-  <div class="week"><div>пн</div><div>вт</div><div>ср</div><div>чт</div><div>пт</div><div>сб</div><div>вс</div></div>
+  <div class="week" id="weekHead"></div>
   <div class="grid" id="grid"></div>
 </div>
 
@@ -178,27 +208,92 @@ button:active{transform:scale(.97);opacity:.85}
 
 <div class="sheet" id="setSheet">
   <div class="grab"></div>
-  <h2>Шрифт</h2>
-  <div class="sub">Выберите шрифт интерфейса</div>
-  <div class="sample"><b id="smSum">12 345,67 ₽</b><span id="smTxt">Октябрь · 18 смен · 142 ч 30 мин</span></div>
-  <div class="group-title">Системные шрифты</div>
-  <div class="rows fonts" id="fontList"></div>
-  <div class="group-title">Свой шрифт</div>
-  <div class="custom">
-    <label for="customFont">Название</label>
-    <input id="customFont" list="localFonts" placeholder="например, Avenir Next" autocomplete="off" autocapitalize="off" spellcheck="false">
-    <datalist id="localFonts"></datalist>
+  <h2>Настройки</h2>
+  <div class="tabs" id="tabs">
+    <button class="on" data-t="look">Вид</button>
+    <button data-t="font">Шрифт</button>
+    <button data-t="data">Данные</button>
   </div>
-  <div class="hint">Введите название шрифта, установленного на устройстве. Если такого шрифта нет, останется стандартный.</div>
-  <button class="linkbtn" id="loadLocal" hidden>Показать шрифты устройства…</button>
-  <div id="localList" class="localList" hidden></div>
-  <div class="group-title">Данные</div>
-  <div class="rows">
-    <button class="row" id="exp" style="width:100%"><label style="pointer-events:none">Сохранить копию в файл</label><span style="color:var(--blue)">↥</span></button>
-    <button class="row" id="imp" style="width:100%"><label style="pointer-events:none">Загрузить из файла</label><span style="color:var(--blue)">↧</span></button>
+
+  <div class="tab" id="tab-look">
+    <div class="vprev"><div class="grid" id="miniGrid"></div></div>
+
+    <div class="opt"><div class="t">Тема</div>
+      <div class="seg" data-k="theme">
+        <button data-v="auto">Авто</button><button data-v="light">Светлая</button><button data-v="dark">Тёмная</button>
+      </div>
+    </div>
+
+    <div class="opt"><div class="t">Цветовая схема</div>
+      <div class="pal" id="pal"></div>
+      <div class="hint" id="palName"></div>
+    </div>
+
+    <div class="opt"><div class="t">Свои цвета</div>
+      <div class="rows">
+        <label class="row"><span>Рабочий день</span><input type="color" id="cWork"></label>
+        <label class="row"><span>Выходной</span><input type="color" id="cOff"></label>
+        <label class="row"><span>Акцент и «Сегодня»</span><input type="color" id="cAcc"></label>
+      </div>
+    </div>
+
+    <div class="opt"><div class="t">Форма клеток</div>
+      <div class="seg" data-k="shape">
+        <button data-v="square">Квадрат</button><button data-v="round">Скруглённая</button><button data-v="circle">Круг</button>
+      </div>
+    </div>
+
+    <div class="opt"><div class="t">Плотность</div>
+      <div class="seg" data-k="gap">
+        <button data-v="compact">Тесно</button><button data-v="normal">Обычно</button><button data-v="roomy">Свободно</button>
+      </div>
+    </div>
+
+    <div class="opt"><div class="t">Размер текста</div>
+      <div class="seg" data-k="size">
+        <button data-v="small">Мелкий</button><button data-v="normal">Обычный</button><button data-v="large">Крупный</button>
+      </div>
+    </div>
+
+    <div class="opt"><div class="t">Неделя начинается с</div>
+      <div class="seg" data-k="week">
+        <button data-v="1">Понедельника</button><button data-v="0">Воскресенья</button>
+      </div>
+    </div>
+
+    <div class="opt">
+      <div class="rows">
+        <div class="row"><span>Сумма в клетке дня</span><label class="sw"><input type="checkbox" id="showSum"><i></i></label></div>
+      </div>
+    </div>
+
+    <button class="linkbtn danger" id="resetLook">Сбросить оформление</button>
   </div>
-  <div class="hint" id="dataMsg">Копия защитит смены, если браузер очистит данные или вы смените телефон.</div>
-  <input type="file" id="impFile" accept="application/json,.json" hidden>
+
+  <div class="tab" id="tab-font" hidden>
+    <div class="sample"><b id="smSum">12 345,67 ₽</b><span id="smTxt">Октябрь · 18 смен · 142 ч 30 мин</span></div>
+    <div class="group-title">Системные шрифты</div>
+    <div class="rows fonts" id="fontList"></div>
+    <div class="group-title">Свой шрифт</div>
+    <div class="custom">
+      <label for="customFont">Название</label>
+      <input id="customFont" list="localFonts" placeholder="например, Avenir Next" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <datalist id="localFonts"></datalist>
+    </div>
+    <div class="hint">Введите название шрифта, установленного на устройстве. Если такого шрифта нет, останется стандартный.</div>
+    <button class="linkbtn" id="loadLocal" hidden>Показать шрифты устройства…</button>
+    <div id="localList" class="localList" hidden></div>
+  </div>
+
+  <div class="tab" id="tab-data" hidden>
+    <div class="rows">
+      <button class="row" id="exp" style="width:100%"><label style="pointer-events:none">Сохранить копию в файл</label><span style="color:var(--blue)">↥</span></button>
+      <button class="row" id="imp" style="width:100%"><label style="pointer-events:none">Загрузить из файла</label><span style="color:var(--blue)">↧</span></button>
+    </div>
+    <div class="hint" id="dataMsg">Копия защитит смены и оформление, если браузер очистит данные или вы смените телефон.</div>
+    <input type="file" id="impFile" accept="application/json,.json" hidden>
+  </div>
+
   <div class="btns" style="margin-top:16px"><button class="btn pri" id="setDone">Готово</button></div>
 </div>
 
@@ -227,14 +322,19 @@ const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m;
 const durMin = (s, e) => { let d = toMin(e) - toMin(s); if (d <= 0) d += 1440; return d; }; // через полночь
 const earn = (min, rateKop) => Math.round(min * rateKop / 60);
 const fmtDur = min => { const h = Math.floor(min / 60), m = min % 60; return m ? `${h} ч ${m} мин` : `${h} ч`; };
-const fmtShort = kop => { const r = Math.round(kop / 100); return r.toLocaleString('ru-RU') + ' ₽'; };
+const fmtShort = kop => {
+  const r = Math.round(kop / 100);
+  if (r >= 100000) return Math.round(r / 1000).toLocaleString('ru-RU') + ' тыс';
+  return r.toLocaleString('ru-RU') + ' ₽';
+};
 
 function render() {
   const y = view.getFullYear(), m = view.getMonth();
+  renderWeekHead();
   $('year').textContent = y;
   $('month').textContent = view.toLocaleDateString('ru-RU', {month: 'long'});
   const first = new Date(y, m, 1);
-  const offset = (first.getDay() + 6) % 7;
+  const offset = (first.getDay() - (look.week === '0' ? 0 : 1) + 7) % 7;
   const days = new Date(y, m + 1, 0).getDate();
   const todayK = key(new Date());
   let html = '';
@@ -249,7 +349,8 @@ function render() {
       const mn = durMin(s.start, s.end);
       const e = earn(mn, s.rate);
       cnt++; mins += mn; sum += e;
-      html += `<button class="${cls.concat(k === todayK ? ['today'] : []).join(' ')}" data-k="${k}"><span class="n">${d}</span><span class="s">${fmtShort(e)}</span></button>`;
+      const txt = look.shape === 'circle' ? fmtShort(e).replace(' ₽', '').replace(' тыс', 'к') : fmtShort(e);
+      html += `<button class="${cls.concat(k === todayK ? ['today'] : []).join(' ')}" data-k="${k}"><span class="n">${d}</span><span class="s">${txt}</span></button>`;
     } else {
       if (k < todayK) cls.push('past');
       if (k === todayK) cls.push('today');
@@ -292,6 +393,132 @@ function closeSheet() { $('ov').classList.remove('show'); $('sheet').classList.r
 
 $('grid').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) openSheet(b.dataset.k); });
 $('ov').addEventListener('click', () => { closeSheet(); closeSettings(); });
+
+/* ---------- оформление ---------- */
+const PRESETS = [
+  {id: 'ios',      name: 'iOS',     work: '#34C759', accent: '#007AFF'},
+  {id: 'sunset',   name: 'Закат',   work: '#FF9500', accent: '#FF3B30'},
+  {id: 'lavender', name: 'Лаванда', work: '#AF52DE', accent: '#5856D6'},
+  {id: 'ocean',    name: 'Океан',   work: '#32ADE6', accent: '#0A60FF'},
+  {id: 'rose',     name: 'Роза',    work: '#FF2D55', accent: '#FF2D55'},
+  {id: 'lemon',    name: 'Лимон',   work: '#FFD60A', accent: '#FF9F0A'}
+];
+const LOOK_DEF = {theme: 'auto', preset: 'ios', work: '#34C759', off: '', accent: '#007AFF', shape: 'round', gap: 'normal', size: 'normal', week: '1', sum: true};
+const HEX = /^#[0-9a-f]{6}$/i;
+const pick = (v, list, def) => list.includes(String(v)) ? String(v) : def;
+
+function sanitizeLook(o) {
+  o = o && typeof o === 'object' ? o : {};
+  const r = {...LOOK_DEF};
+  r.theme = pick(o.theme, ['auto', 'light', 'dark'], r.theme);
+  r.shape = pick(o.shape, ['square', 'round', 'circle'], r.shape);
+  r.gap   = pick(o.gap, ['compact', 'normal', 'roomy'], r.gap);
+  r.size  = pick(o.size, ['small', 'normal', 'large'], r.size);
+  r.week  = pick(o.week, ['0', '1'], r.week);
+  r.sum   = o.sum !== false;
+  if (HEX.test(o.work)) r.work = o.work;
+  if (HEX.test(o.accent)) r.accent = o.accent;
+  r.off = HEX.test(o.off) ? o.off : '';
+  r.preset = (o.preset === 'custom' || PRESETS.some(p => p.id === o.preset)) ? o.preset : 'ios';
+  return r;
+}
+let look = sanitizeLook(load('look', {}));
+
+// читаемый цвет текста поверх заданного цвета
+const lum = h => {
+  const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255)
+    .map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+};
+const onColor = h => lum(h) > 0.5 ? '#1C1C1E' : '#FFFFFF';
+const darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+const effDark = () => look.theme === 'dark' || (look.theme === 'auto' && !!(darkMQ && darkMQ.matches));
+const themeOff = () => {
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--off').trim();
+  return HEX.test(v) ? v : '#E9E9EE';
+};
+
+function applyLook() {
+  const root = document.documentElement, st = root.style;
+  if (look.theme === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', look.theme);
+  st.setProperty('--green', look.work);
+  st.setProperty('--on-work', onColor(look.work));
+  st.setProperty('--blue', look.accent);
+  st.setProperty('--on-accent', onColor(look.accent));
+  if (look.off) {
+    st.setProperty('--off', look.off);
+    st.setProperty('--off-text', lum(look.off) > 0.5 ? '#3A3A3C' : '#EBEBF5');
+  } else {
+    st.removeProperty('--off'); st.removeProperty('--off-text');
+  }
+  st.setProperty('--r', {square: '6px', round: '14px', circle: '50%'}[look.shape]);
+  st.setProperty('--ar', look.shape === 'circle' ? '1/1' : '1/1.12');
+  st.setProperty('--mh', look.shape === 'circle' ? '0px' : '44px');
+  st.setProperty('--gap', {compact: '3px', normal: '6px', roomy: '10px'}[look.gap]);
+  st.setProperty('--fs', {small: '.9', normal: '1', large: '1.12'}[look.size]);
+  document.body.classList.toggle('no-sum', !look.sum);
+  const meta = $('themeMeta'); if (meta) meta.content = effDark() ? '#000000' : '#F2F2F7';
+}
+
+function setVal(id, v) { const el = $(id); if (el.value.toLowerCase() !== v.toLowerCase()) el.value = v; }
+function syncLookUI() {
+  document.querySelectorAll('.seg').forEach(seg =>
+    seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', String(look[seg.dataset.k]) === b.dataset.v)));
+  document.querySelectorAll('#pal button').forEach(b => b.classList.toggle('on', b.dataset.p === look.preset));
+  const p = PRESETS.find(x => x.id === look.preset);
+  $('palName').textContent = p ? p.name : 'Свои цвета';
+  setVal('cWork', look.work);
+  setVal('cAcc', look.accent);
+  setVal('cOff', look.off || themeOff());
+  $('showSum').checked = look.sum;
+}
+function saveLook() { store('look', look); applyLook(); syncLookUI(); render(); }
+
+function buildPalette() {
+  $('pal').innerHTML = PRESETS.map(p =>
+    `<button data-p="${p.id}" style="--w:${p.work};--a:${p.accent}" aria-label="${p.name}"></button>`).join('');
+}
+function renderMini() {
+  const cells = [[8, 'work', '3 150 ₽'], [9, 'work', '2 800 ₽'], [10, '', ''], [11, 'today', ''], [12, 'work', '3 150 ₽'], [13, '', ''], [14, '', '']];
+  $('miniGrid').innerHTML = cells.map(([d, c, s]) =>
+    `<div class="day ${c === 'work' ? 'work' : ''} ${c === 'today' ? 'today' : ''}"><span class="n">${d}</span>${s ? `<span class="s">${s}</span>` : ''}</div>`).join('');
+}
+
+const WD = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+function renderWeekHead() {
+  const start = look.week === '0' ? 6 : 0;
+  $('weekHead').innerHTML = Array.from({length: 7}, (_, i) => {
+    const idx = (start + i) % 7;
+    return `<div class="${idx >= 5 ? 'we' : ''}">${WD[idx]}</div>`;
+  }).join('');
+}
+
+function showTab(t) {
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  document.querySelectorAll('.tab').forEach(x => { x.hidden = x.id !== 'tab-' + t; });
+}
+$('tabs').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) showTab(b.dataset.t); });
+
+document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  look[seg.dataset.k] = b.dataset.v;
+  saveLook();
+}));
+$('pal').addEventListener('click', e => {
+  const b = e.target.closest('[data-p]'); if (!b) return;
+  const p = PRESETS.find(x => x.id === b.dataset.p);
+  look = {...look, preset: p.id, work: p.work, accent: p.accent, off: ''};
+  saveLook();
+});
+[['cWork', 'work'], ['cOff', 'off'], ['cAcc', 'accent']].forEach(([id, k]) =>
+  $(id).addEventListener('input', e => { look[k] = e.target.value; look.preset = 'custom'; saveLook(); }));
+$('showSum').addEventListener('change', e => { look.sum = e.target.checked; saveLook(); });
+$('resetLook').onclick = () => {
+  if (confirm('Сбросить оформление к стандартному?')) { look = {...LOOK_DEF}; saveLook(); }
+};
+if (darkMQ && darkMQ.addEventListener) darkMQ.addEventListener('change', () => { applyLook(); syncLookUI(); });
+
+buildPalette(); renderMini(); applyLook(); syncLookUI();
 
 /* ---------- шрифты ---------- */
 const FONTS = [
@@ -401,7 +628,7 @@ $('rate').addEventListener('blur', e => { e.target.value = kopToInput(baseRate);
 
 /* ---------- экспорт / импорт ---------- */
 $('exp').onclick = () => {
-  const data = {app: 'shift-calendar', version: 1, rate: baseRate, shifts, font: fontPref};
+  const data = {app: 'shift-calendar', version: 2, rate: baseRate, shifts, font: fontPref, look};
   const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -427,6 +654,7 @@ $('impFile').addEventListener('change', async e => {
     shifts = clean;
     baseRate = Number.isInteger(d.rate) && d.rate >= 0 ? d.rate : baseRate;
     store('shifts', shifts); store('rate', baseRate);
+    if (d.look) { look = sanitizeLook(d.look); store('look', look); applyLook(); syncLookUI(); }
     $('rate').value = kopToInput(baseRate);
     render();
     $('dataMsg').textContent = `Загружено смен: ${n}`;

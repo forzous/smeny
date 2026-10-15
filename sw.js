@@ -1,5 +1,5 @@
 // При каждом обновлении приложения меняйте номер версии
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'shifts-' + VERSION;
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
